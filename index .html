@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Task & Earn App - Final Version</title>
+    <style>
+        :root {
+            --primary-bg: #2C001E;
+            --card-bg: #3A214A;
+            --header-gradient-start: #FF85A2;
+            --header-gradient-end: #FFC7B0;
+            --text-light: #FFFFFF;
+            --text-dark: #333333;
+            --accent-pink: #FF69B4;
+            --accent-lavender: #BCA0DC;
+            /* --accent-blue: #4A90E2; -- अब उपयोग में नहीं है */
+            --accent-orange: #F5A623;
+            --accent-magenta: #BD10E0;
+            --accent-teal: #008080;
+            --success-green: #4CAF50; 
+            --error-red: #F44336;
+            --info-blue: #2196F3; 
+            --page-transition-duration: 0.4s;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0;
+            background-color: var(--primary-bg); color: var(--text-light); overflow-x: hidden;
+        }
+
+        .app-container { width: 100%; min-height: 100vh; position: relative; }
+
+        .page {
+            width: 100%; min-height: 100vh; background-color: var(--primary-bg);
+            position: absolute; top: 0; left: 0; padding: 20px 15px;
+            display: none; flex-direction: column; opacity: 0;
+            transform: translateX(100%);
+            transition: opacity var(--page-transition-duration) ease-out, transform var(--page-transition-duration) ease-out;
+            overflow-y: auto;
+        }
+        .page.active-page { display: flex; opacity: 1; transform: translateX(0); z-index: 10; }
+        .page.slide-out { transform: translateX(-100%); opacity: 0; }
+
+        #dashboardPage { padding: 0; transform: translateX(0); opacity: 1; display: flex; }
+        .dashboard-content-wrapper { width: 100%; flex-grow: 1; overflow-y: auto; }
+        .dashboard-main-content { padding: 20px 15px; }
+
+        .header {
+            background: linear-gradient(135deg, var(--header-gradient-start), var(--header-gradient-end));
+            padding: 20px 15px; display: flex; justify-content: space-between; align-items: center;
+            border-bottom-left-radius: 25px; border-bottom-right-radius: 25px;
+            color: var(--text-dark); position: sticky; top: 0; z-index: 100; width:100%;
+        }
+        .header .profile { display: flex; align-items: center; font-weight: bold; }
+        .header .profile-icon {
+            width: 40px; height: 40px; background-color: #e0e0e0; border-radius: 50%; margin-right: 10px;
+            display: flex; justify-content: center; align-items: center; font-size: 20px; color: var(--text-dark);
+        }
+        .header .wallet-balance-display {
+            display: flex; align-items: center; background-color: var(--text-light); padding: 8px 15px;
+            border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.15); font-weight: bold; cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .header .wallet-balance-display:hover { transform: scale(1.05); }
+        .header .wallet-icon { margin-right: 8px; font-size: 18px; color: var(--accent-orange); }
+
+        .task-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 25px; }
+        .task-card {
+            background-color: var(--card-bg); padding: 20px 15px; border-radius: 15px; text-align: center; cursor: pointer;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .task-card:hover { transform: translateY(-5px); box-shadow: 0 6px 12px rgba(0,0,0,0.3); }
+        .task-card .icon-placeholder {
+            width: 50px; height: 50px; border-radius: 50%; margin: 0 auto 12px auto; display: flex;
+            justify-content: center; align-items: center; font-size: 24px; color: var(--text-light);
+        }
+        .task-card p { margin: 0; font-size: 14px; font-weight: 500; }
+        .task-card[data-task-target="captchaPage"] .icon-placeholder { background-color: var(--accent-orange); }
+        .task-card[data-task-target="dailyBonusPage"] .icon-placeholder { background-color: var(--accent-magenta); }
+        .task-card[data-task-target="spinWheelPage"] .icon-placeholder { background-color: var(--accent-teal); }
+        .task-card[data-task-target="mathQuizPage"] .icon-placeholder { background-color: #6A0DAD; }
+
+        .promo-section { display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; }
+        .promo-card {
+            padding: 20px; border-radius: 15px; display: flex; align-items: center; cursor: pointer;
+             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .promo-card.refer-friend { background-color: var(--accent-lavender); color: var(--text-dark); } 
+
+        .promo-card .image-placeholder {
+            width: 60px; height: 60px; background-color: rgba(255,255,255,0.2); 
+            border-radius: 10px; margin-right: 15px; display: flex; justify-content: center;
+            align-items: center; font-size: 28px; 
+            flex-shrink: 0;
+        }
+        
+        .promo-card .text-content h3 { margin: 0 0 5px 0; font-size: 16px; }
+        .promo-card .text-content p { margin: 0; font-size: 12px; opacity: 0.9; }
+        
+        .telegram-banner { background-color: var(--card-bg); padding: 15px 20px; border-radius: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 8px rgba(0,0,0,0.2); margin-bottom: 20px; }
+        .telegram-banner .info { display: flex; align-items: center; }
+        .telegram-banner .icon-placeholder { width: 40px; height: 40px; background-color: #0088cc; border-radius: 50%; margin-right: 15px; display: flex; justify-content: center; align-items: center; font-size: 20px; }
+        .telegram-banner .text-content h4 { margin: 0 0 3px 0; font-size: 15px; }
+        .telegram-banner .text-content p { margin: 0; font-size: 12px; opacity: 0.8; }
+        .telegram-banner .earn-now-btn { background-color: var(--text-light); color: var(--text-dark); padding: 10px 18px; border: none; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 13px; }
+
+
+        .task-page-header {
+            display: flex; align-items: center; margin-bottom: 20px;
+            padding-bottom: 15px; border-bottom: 1px solid var(--card-bg);
+        }
+        .back-button {
+            background: none; border: none; color: var(--text-light); font-size: 28px;
+            cursor: pointer; padding: 5px 10px 5px 0; margin-right: 15px;
+        }
+        .task-page-title { font-size: 22px; font-weight: bold; color: var(--accent-pink); }
+        .task-page-content {
+            flex-grow: 1; display: flex; flex-direction: column; align-items: center;
+            text-align: center; width: 100%; max-width: 380px; margin: 0 auto;
+        }
+        .task-page-content input[type="text"], .task-page-content input[type="number"], .task-page-content input[type="email"]  { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #555; background-color: #4a2f5a; color: var(--text-light); font-size: 16px; }
+        .task-page-content button { background-color: var(--accent-pink); color: white; padding: 15px 25px; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: bold; transition: background-color 0.2s; width: 100%; margin-top: 10px; }
+        .task-page-content button:disabled { background-color: #777; cursor: not-allowed; }
+
+        #captchaTextDisplay { font-size: 30px; letter-spacing: 8px; margin-bottom: 20px; padding: 15px; background-color: #5a3f6a; border-radius: 8px; user-select: none; font-family: 'Courier New', Courier, monospace; border: 2px dashed var(--accent-orange); }
+        #dailyBonusMessage { font-size: 18px; margin-bottom: 20px; }
+        #spinWheelContainer { position: relative; width: 280px; height: 280px; margin: 20px auto; }
+        #wheelCanvas { width: 100%; height: 100%; transition: transform 4s cubic-bezier(0.3, 1, 0.7, 1); }
+        #wheelPointer { position: absolute; width: 0; height: 0; border-left: 18px solid transparent; border-right: 18px solid transparent; border-top: 30px solid var(--accent-orange); top: -12px; left: 50%; transform: translateX(-50%); z-index: 10; }
+        #spinButtonPage { background-color: var(--accent-teal); }
+        #spinButtonPage:hover { background-color: #006666; }
+        #mathQuestionDisplay { font-size: 24px; margin-bottom: 20px; font-weight: bold; }
+        #spinLimitMessage { font-size: 14px; margin-top: 15px; color: var(--accent-lavender); opacity: 0.9; }
+
+
+        #walletPage .current-balance-section { background-color: var(--card-bg); padding: 20px; border-radius: 15px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        #walletPage .current-balance-section p { margin: 0 0 8px 0; font-size: 16px; color: var(--accent-lavender); }
+        #walletPage .current-balance-section h3 { margin: 0; font-size: 32px; color: var(--text-light); }
+        #walletPage #pendingWithdrawalsSection { width: 100%; margin-bottom: 20px; }
+        #walletPage #pendingWithdrawalsSection h4 { color: var(--accent-orange); margin-bottom: 10px; text-align: left; border-bottom: 1px solid var(--accent-orange); padding-bottom: 5px; }
+        #walletPage #pendingWithdrawalsDisplayArea { max-height: 200px; overflow-y: auto; padding: 10px; background-color: rgba(0,0,0,0.1); border-radius: 8px; }
+        
+        .pending-withdrawal-item { 
+            color: var(--text-light); 
+            text-align: left; 
+            margin-bottom: 10px; 
+            font-size: 14px; 
+            padding: 10px 12px; 
+            border-radius: 6px; 
+            line-height: 1.5; 
+        }
+        .pending-withdrawal-item.processing {
+            background-color: var(--info-blue); 
+        }
+        .pending-withdrawal-item.success {
+            background-color: var(--success-green);
+        }
+        .pending-withdrawal-item strong { color: #FFEB3B; }
+        .pending-withdrawal-item .status-text {
+            color: #FFFFFF !important; 
+            font-weight: bold;
+        }
+
+
+        #walletPage .withdrawal-form { width: 100%; margin-top: 10px; }
+        #walletPage .withdrawal-form label { display: block; text-align: left; margin-bottom: 8px; font-size: 14px; color: var(--accent-lavender); }
+        #walletPage #withdrawalAmountInput { margin-bottom: 10px; }
+        #walletPage #withdrawalResult { margin-top: 15px; font-size: 15px; }
+
+        #referFriendPage .referral-info-box {
+            background-color: var(--card-bg); padding: 25px; border-radius: 15px;
+            margin-bottom: 20px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        #referFriendPage .referral-info-box p { margin: 0 0 10px 0; font-size: 16px; color: var(--accent-lavender); }
+        #referFriendPage #userReferralLink {
+            font-size: 18px; font-weight: bold; color: var(--accent-teal); word-break: break-all;
+            background-color: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;
+            margin-bottom: 15px; display: inline-block;
+        }
+        #referFriendPage #copyReferralLinkBtn {
+            background-color: var(--accent-orange); font-size: 14px;
+            padding: 10px 20px; margin-bottom: 25px;
+        }
+        #referFriendPage #referralCountDisplay h4 { color: var(--accent-pink); margin-bottom: 5px; }
+        #referFriendPage #referralCountDisplay span { font-size: 28px; font-weight: bold; }
+
+        #toast-notification {
+            visibility: hidden; min-width: 280px; background-color: var(--success-green);
+            color: white; text-align: center; border-radius: 8px; padding: 18px;
+            position: fixed; z-index: 2000; left: 50%; bottom: 30px;
+            transform: translateX(-50%); font-size: 17px; box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+        }
+        #toast-notification.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+        #toast-notification.error { background-color: var(--error-red); }
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+
+        .ad-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column; 
+            justify-content: center;
+            align-items: center; 
+            margin-top: 15px; 
+            margin-bottom: 15px; 
+            gap: 10px; 
+        }
+        .banner-ad-slot {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 15px;
+            margin-bottom: 15px;
+            min-height: 60px; 
+            overflow: hidden; 
+        }
+        .banner-ad-slot iframe, 
+        .banner-ad-slot ins {
+            max-width: 100%; 
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Dashboard Page -->
+        <div id="dashboardPage" class="page active-page">
+            <div class="dashboard-content-wrapper">
+                <div class="header">
+                    <div class="profile"><div class="profile-icon">👤</div><span id="userName">Hi' Immu Bhai</span></div>
+                    <div class="wallet-balance-display" data-task-target="walletPage"><span class="wallet-icon">💰</span><span id="walletBalanceValue">0.0</span> Wallet</div>
+                </div>
+                <div class="dashboard-main-content">
+                    <div class="ad-container">
+                        <script type="text/javascript">
+                            atOptions = { 'key' : '7e39dd7ca7bd5dd7ee32586a5ef7f02a', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+                        </script>
+                        <script type="text/javascript" src="//www.highperformanceformat.com/7e39dd7ca7bd5dd7ee32586a5ef7f02a/invoke.js"></script>
+                    </div>
+                    <div class="task-grid">
+                        <div class="task-card" data-task-target="captchaPage"><div class="icon-placeholder">#</div><p>Play Captcha</p></div>
+                        <div class="task-card" data-task-target="dailyBonusPage"><div class="icon-placeholder">📅</div><p>Daily Bonus</p></div>
+                        <div class="task-card" data-task-target="spinWheelPage"><div class="icon-placeholder">🎡</div><p>Spin Wheel</p></div>
+                        <div class="task-card" data-task-target="mathQuizPage"><div class="icon-placeholder">➕</div><p>Math Quiz</p></div>
+                    </div>
+                    <div class="promo-section">
+                        <div class="promo-card refer-friend" data-task-target="referFriendPage">
+                            <div class="image-placeholder">🎁</div>
+                            <div class="text-content"><h3>Refer a Friend</h3><p>Invite friends, earn rewards!</p></div>
+                        </div>
+                    </div>
+                    <div class="telegram-banner">
+                        <div class="info">
+                            <div class="icon-placeholder">✈️</div>
+                            <div class="text-content"><h4>Telegram</h4><p>Join Our Community</p></div>
+                        </div>
+                        <a href="https://t.me/+Gm06uaAchQE2ZjQ9" target="_blank" style="text-decoration: none;"><button class="earn-now-btn">Join Now</button></a>
+                    </div>
+                    <div class="banner-ad-slot">
+                        <script type="text/javascript">
+                            atOptions = { 'key' : 'a504a14d89292df73ca38e4145566a9c', 'format' : 'iframe', 'height' : 60, 'width' : 468, 'params' : {} };
+                        </script>
+                        <script type="text/javascript" src="//www.highperformanceformat.com/a504a14d89292df73ca38e4145566a9c/invoke.js"></script>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="referFriendPage" class="page">
+            <div class="task-page-header">
+                <button class="back-button" data-target-page="dashboardPage">←</button>
+                <h2 class="task-page-title">Refer & Earn</h2>
+            </div>
+            <div class="task-page-content">
+                <div class="referral-info-box">
+                    <p>Share your unique referral link with friends:</p>
+                    <div id="userReferralLink">Generating your link...</div>
+                    <button id="copyReferralLinkBtn">Copy Link</button>
+                    <div id="referralCountDisplay">
+                        <h4>Friends Joined via Your Link:</h4>
+                        <span id="friendsJoinedCount">0</span>
+                    </div>
+                </div>
+                 <div class="banner-ad-slot">
+                    <script type="text/javascript">
+                        atOptions = { 'key' : 'a504a14d89292df73ca38e4145566a9c', 'format' : 'iframe', 'height' : 60, 'width' : 468, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="//www.highperformanceformat.com/a504a14d89292df73ca38e4145566a9c/invoke.js"></script>
+                </div>
+                <p style="font-size: 14px; opacity: 0.8; margin-top: 15px;">When your friends join using your link, you get bonus rewards! (Bonus functionality not implemented yet).</p>
+            </div>
+        </div>
+
+        <div id="walletPage" class="page">
+            <div class="task-page-header">
+                <button class="back-button" data-target-page="dashboardPage">←</button>
+                <h2 class="task-page-title">My Wallet & Withdrawals</h2>
+            </div>
+            <div class="task-page-content">
+                <div class="current-balance-section">
+                    <p>Your Current Balance</p>
+                    <h3 id="walletPageBalanceDisplay">₹0.0</h3>
+                </div>
+                <div id="pendingWithdrawalsSection">
+                    <h4>Pending Withdrawal Requests</h4>
+                    <div id="pendingWithdrawalsDisplayArea"><p style="opacity:0.7;">No pending withdrawals.</p></div>
+                </div>
+                <hr style="width:100%; border-color: var(--card-bg); margin: 15px 0;">
+                <h4 style="margin-top:0; margin-bottom:15px; color:var(--accent-pink);">Request New Withdrawal</h4>
+                <form id="withdrawalForm" class="withdrawal-form">
+                    <label for="upiIdInput">UPI ID (e.g., yourname@okhdfcbank)</label>
+                    <input type="text" id="upiIdInput" placeholder="Enter your UPI ID" required>
+                    <label for="withdrawalAmountInput">Amount to Withdraw (Min ₹1000)</label>
+                    <input type="number" id="withdrawalAmountInput" placeholder="e.g., 1000" min="1000" step="0.1" required>
+                    <button type="submit" id="submitWithdrawalBtn">Request Withdrawal</button>
+                </form>
+                <p id="withdrawalResult"></p>
+                <div class="banner-ad-slot" style="margin-top: 25px;">
+                    <script type="text/javascript">
+                        atOptions = { 'key' : 'a504a14d89292df73ca38e4145566a9c', 'format' : 'iframe', 'height' : 60, 'width' : 468, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="//www.highperformanceformat.com/a504a14d89292df73ca38e4145566a9c/invoke.js"></script>
+                </div>
+                <div class="ad-container">
+                     <script type="text/javascript">
+                        atOptions = { 'key' : '7e39dd7ca7bd5dd7ee32586a5ef7f02a', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="//www.highperformanceformat.com/7e39dd7ca7bd5dd7ee32586a5ef7f02a/invoke.js"></script>
+                </div>
+            </div>
+        </div>
+
+        <div id="captchaPage" class="page">
+            <div class="task-page-header">
+                <button class="back-button" data-target-page="dashboardPage">←</button>
+                <h2 class="task-page-title">Solve Captcha</h2>
+            </div>
+            <div class="task-page-content">
+                <div class="banner-ad-slot">
+                    <script type="text/javascript">
+                        atOptions = { 'key' : 'a504a14d89292df73ca38e4145566a9c', 'format' : 'iframe', 'height' : 60, 'width' : 468, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="//www.highperformanceformat.com/a504a14d89292df73ca38e4145566a9c/invoke.js"></script>
+                </div>
+                <div id="captchaTextDisplay"></div>
+                <input type="text" id="captchaInput" placeholder="Enter Captcha Above">
+                <button id="submitCaptchaBtnPage">Submit Captcha</button>
+                <div class="banner-ad-slot">
+                    <script type="text/javascript">
+                        atOptions = { 'key' : 'a504a14d89292df73ca38e4145566a9c', 'format' : 'iframe', 'height' : 60, 'width' : 468, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="//www.highperformanceformat.com/a504a14d89292df73ca38e4145566a9c/invoke.js"></script>
+                </div>
+                <div class="ad-container"> 
+                    <script type="text/javascript">
+                        atOptions = { 'key' : '7e39dd7ca7bd5dd7ee32586a5ef7f02a', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="//www.highperformanceformat.com/7e39dd7ca7bd5dd7ee32586a5ef7f02a/invoke.js"></script>
+                     <script type="text/javascript">
+                        atOptions = { 'key' : '7e39dd7ca7bd5dd7ee32586a5ef7f02a', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="//www.highperformanceformat.com/7e39dd7ca7bd5dd7ee32586a5ef7f02a/invoke.js"></script>
+                </div>
+                 <div class="banner-ad-slot">
+                    <script type="text/javascript">
+                        atOptions = { 'key' : 'a504a14d89292df73ca38e4145566a9c', 'format' : 'iframe', 'height' : 60, 'width' : 468, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="//www.highperformanceformat.com/a504a14d89292df73ca38e4145566a9c/invoke.js"></script>
+                </div>
+            </div>
+        </div>
+
+        <div id="dailyBonusPage" class="page">
+            <div class="task-page-header">
+                <button class="back-button" data-target-page="dashboardPage">←</button>
+                <h2 class="task-page-title">Daily Bonus</h2>
+            </div>
+            <div class="task-page-content">
+                 <div class="banner-ad-slot">
+                    <script type="text/javascript">
+                        atOptions = { 'key' : 'a504a14d89292df73ca38e4145566a9c', 'format' : 'iframe', 'height' : 60, 'width' : 468, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="//www.highperformanceformat.com/a504a14d89292df73ca38e4145566a9c/invoke.js"></script>
+                </div>
+                <p id="dailyBonusMessage">Claim your daily bonus!</p>
+                <img src="https://img.icons8.com/plasticine/100/000000/gift.png" alt="Gift Box" style="width:100px; height:100px; margin-bottom:20px;"/>
+                <button id="claimDailyBonusBtnPage">Claim Now</button>
+                <div class="banner-ad-slot">
+                    <script type="text/javascript">
+                        atOptions = { 'key' : 'a504a14d89292df73ca38e4145566a9c', 'format' : 'iframe', 'height' : 60, 'width' : 468, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="//www.highperformanceformat.com/a504a14d89292df73ca38e4145566a9c/invoke.js"></script>
+                </div>
+                <div class="ad-container">
+                    <script type="text/javascript">
+                        atOptions = { 'key' : '7e39dd7ca7bd5dd7ee32586a5ef7f02a', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="//www.highperformanceformat.com/7e39dd7ca7bd5dd7ee32586a5ef7f02a/invoke.js"></script>
+                     <script type="text/javascript">
+                        atOptions = { 'key' : '7e39dd7ca7bd5dd7ee32586a5ef7f02a', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="//www.highperformanceformat.com/7e39dd7ca7bd5dd7ee32586a5ef7f02a/invoke.js"></script>
+                </div>
+                 <div class="banner-ad-slot">
+                    <script type="text/javascript">
+                        atOptions = { 'key' : 'a504a14d89292df73ca38e4145566a9c', 'format' : 'iframe', 'height' : 60, 'width' : 468, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="//www.highperformanceformat.com/a504a14d89292df73ca38e4145566a9c/invoke.js"></script>
+                </div>
+            </div>
+        </div>
+
+        <div id="spinWheelPage" class="page">
+            <div class="task-page-header">
+                <button class="back-button" data-target-page="dashboardPage">←</button>
+                <h2 class="task-page-title">Spin & Win</h2>
+            </div>
+            <div class="task-page-content">
+                <div id="spinWheelContainer">
+                    <canvas id="wheelCanvas" width="280" height="280"></canvas>
+                    <div id="wheelPointer"></div>
+                </div>
+                <button id="spinButtonPage">SPIN THE WHEEL</button>
+                <div id="spinLimitMessage"></div> 
+                <div class="banner-ad-slot">
+                    <script type="text/javascript">
+                        atOptions = { 'key' : 'a504a14d89292df73ca38e4145566a9c', 'format' : 'iframe', 'height' : 60, 'width' : 468, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="//www.highperformanceformat.com/a504a14d89292df73ca38e4145566a9c/invoke.js"></script>
+                </div>
+                <div class="ad-container">
+                    <script type="text/javascript">
+                        atOptions = { 'key' : '7e39dd7ca7bd5dd7ee32586a5ef7f02a', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="//www.highperformanceformat.com/7e39dd7ca7bd5dd7ee32586a5ef7f02a/invoke.js"></script>
+                </div>
+            </div>
+        </div>
+
+        <div id="mathQuizPage" class="page">
+            <div class="task-page-header">
+                <button class="back-button" data-target-page="dashboardPage">←</button>
+                <h2 class="task-page-title">Math Quiz</h2>
+            </div>
+            <div class="task-page-content">
+                 <div class="banner-ad-slot">
+                    <script type="text/javascript">
+                        atOptions = { 'key' : 'a504a14d89292df73ca38e4145566a9c', 'format' : 'iframe', 'height' : 60, 'width' : 468, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="//www.highperformanceformat.com/a504a14d89292df73ca38e4145566a9c/invoke.js"></script>
+                </div>
+                <div id="mathQuestionDisplay">What is 5 + 3?</div>
+                <input type="number" id="mathAnswerInputPage" placeholder="Your Answer">
+                <button id="submitMathAnswerBtnPage">Submit Answer</button>
+                <div class="banner-ad-slot">
+                    <script type="text/javascript">
+                        atOptions = { 'key' : 'a504a14d89292df73ca38e4145566a9c', 'format' : 'iframe', 'height' : 60, 'width' : 468, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="//www.highperformanceformat.com/a504a14d89292df73ca38e4145566a9c/invoke.js"></script>
+                </div>
+                <div class="ad-container">
+                     <script type="text/javascript">
+                        atOptions = { 'key' : '7e39dd7ca7bd5dd7ee32586a5ef7f02a', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="//www.highperformanceformat.com/7e39dd7ca7bd5dd7ee32586a5ef7f02a/invoke.js"></script>
+                     <script type="text/javascript">
+                        atOptions = { 'key' : '7e39dd7ca7bd5dd7ee32586a5ef7f02a', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="//www.highperformanceformat.com/7e39dd7ca7bd5dd7ee32586a5ef7f02a/invoke.js"></script>
+                </div>
+                 <div class="banner-ad-slot">
+                    <script type="text/javascript">
+                        atOptions = { 'key' : 'a504a14d89292df73ca38e4145566a9c', 'format' : 'iframe', 'height' : 60, 'width' : 468, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="//www.highperformanceformat.com/a504a14d89292df73ca38e4145566a9c/invoke.js"></script>
+                </div>
+            </div>
+        </div>
+
+    </div> 
+    <div id="toast-notification"></div>
+
+    <!-- Social Bar Ad Script (Placed once at the end of the body) -->
+    <script type='text/javascript' src='//pl26185093.profitableratecpm.com/13/d8/de/13d8de43d1674c6d29cdc567f69012d5.js'></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const walletBalanceValueEl = document.getElementById('walletBalanceValue');
+        const taskCards = document.querySelectorAll('.task-card');
+        const promoCards = document.querySelectorAll('.promo-card'); 
+        const backButtons = document.querySelectorAll('.back-button');
+        const toastNotification = document.getElementById('toast-notification');
+        const headerWalletButton = document.querySelector('.wallet-balance-display');
+        let currentPageId = 'dashboardPage';
+
+        let currentWalletBalance = 0;
+        let generatedCaptcha = ''; 
+        let mathQuizAnswer = 0; 
+        let dailyBonusRewardAmount; 
+
+        const wheelCanvas = document.getElementById('wheelCanvas');
+        const spinButtonPage = document.getElementById('spinButtonPage');
+        const spinLimitMessageEl = document.getElementById('spinLimitMessage');
+        const ctxw = wheelCanvas ? wheelCanvas.getContext('2d') : null;
+        const segments = 8;
+        const segmentColors = ["#FFD700", "#FF6347", "#ADFF2F", "#1E90FF", "#BA55D3", "#32CD32", "#FF4500", "#40E0D0"];
+        let currentAngle = 0;
+        let isSpinning = false;
+        const MAX_SPINS_PER_DAY = 30;
+        const SPIN_COUNT_KEY = 'spinWheelDailyCount';
+        const LAST_SPIN_DATE_KEY = 'spinWheelLastDate';
+
+
+        const walletPageBalanceDisplayEl = document.getElementById('walletPageBalanceDisplay');
+        const withdrawalForm = document.getElementById('withdrawalForm');
+        const upiIdInput = document.getElementById('upiIdInput');
+        const withdrawalAmountInput = document.getElementById('withdrawalAmountInput');
+        const withdrawalResultEl = document.getElementById('withdrawalResult');
+        const pendingWithdrawalsDisplayAreaEl = document.getElementById('pendingWithdrawalsDisplayArea');
+        const PENDING_WITHDRAWALS_LIST_KEY = 'pendingWithdrawalsList';
+        const MIN_WITHDRAWAL_AMOUNT = 1000;
+
+        const userReferralLinkEl = document.getElementById('userReferralLink');
+        const copyReferralLinkBtn = document.getElementById('copyReferralLinkBtn');
+        const friendsJoinedCountEl = document.getElementById('friendsJoinedCount');
+        const USER_REFERRAL_ID_KEY = 'userReferralId';
+        const REFERRAL_COUNTS_KEY_PREFIX = 'referralCount_';
+
+        function loadWalletBalance() {
+            const savedBalance = localStorage.getItem('userWalletBalance');
+            if (savedBalance !== null) currentWalletBalance = parseFloat(savedBalance);
+            updateWalletDisplay();
+        }
+        function saveWalletBalance() {
+            localStorage.setItem('userWalletBalance', currentWalletBalance.toFixed(1));
+        }
+        function updateWalletDisplay() {
+            const formattedBalance = `₹${currentWalletBalance.toFixed(1)}`;
+            if (walletBalanceValueEl) walletBalanceValueEl.textContent = currentWalletBalance.toFixed(1);
+            if (walletPageBalanceDisplayEl) walletPageBalanceDisplayEl.textContent = formattedBalance;
+        }
+        function showToast(message, type = 'success') {
+            if (!toastNotification) return;
+            toastNotification.textContent = message;
+            toastNotification.className = 'show';
+            if (type === 'error') toastNotification.classList.add('error');
+            setTimeout(() => {
+                toastNotification.className = toastNotification.className.replace('show', '');
+                toastNotification.classList.remove('error');
+            }, 3000);
+        }
+        function getRandomReward() {
+            const min = 1.0; const max = 5.0;
+            return parseFloat((Math.random() * (max - min) + min).toFixed(1));
+        }
+        function addToWallet(amount, taskName) {
+            currentWalletBalance += amount; updateWalletDisplay(); saveWalletBalance();
+            showToast(`🎉 You earned ₹${amount.toFixed(1)} from ${taskName}!`);
+        }
+
+        function showPage(pageIdToShow) {
+            const currentPage = document.getElementById(currentPageId);
+            const nextPage = document.getElementById(pageIdToShow);
+            if (currentPage && nextPage && currentPageId !== pageIdToShow) {
+                currentPage.classList.add('slide-out'); currentPage.classList.remove('active-page');
+                setTimeout(() => {
+                    currentPage.style.display = 'none'; currentPage.classList.remove('slide-out');
+                    nextPage.style.display = 'flex'; void nextPage.offsetWidth; 
+                    nextPage.classList.add('active-page'); currentPageId = pageIdToShow;
+                    initializePageContent(pageIdToShow);
+                }, parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--page-transition-duration')) * 1000);
+            } else if (currentPageId === pageIdToShow && nextPage) {
+                if (nextPage.style.display !== 'flex') { nextPage.style.display = 'flex'; nextPage.classList.add('active-page'); }
+                initializePageContent(pageIdToShow);
+            }
+        }
+        
+        function updateWithdrawalStatus(requestId, newStatus) {
+            let pendingWithdrawals = JSON.parse(localStorage.getItem(PENDING_WITHDRAWALS_LIST_KEY)) || [];
+            const requestIndex = pendingWithdrawals.findIndex(req => req.id === requestId);
+            if (requestIndex > -1) {
+                pendingWithdrawals[requestIndex].status = newStatus;
+                localStorage.setItem(PENDING_WITHDRAWALS_LIST_KEY, JSON.stringify(pendingWithdrawals));
+                if (currentPageId === 'walletPage') {
+                    initializePageContent('walletPage');
+                }
+            }
+        }
+
+
+        function initializePageContent(pageId) {
+            // --- START: Ensure social bar ad visibility ---
+            const socialAdSelectors = [
+                'body > div[id^="adModal"]', 
+                'body > div[style*="bottom: 0px"]', 
+                'body > div[style*="position: fixed"]', 
+                'body > iframe[src*="profitableratecpm"]',
+                'body > iframe[name*="google_ads_iframe"]',
+                'ins.adsbygoogle'
+                // '#specificAdIdFromProvider', 
+                // '.specificAdClassFromProvider' 
+            ];
+
+            try {
+                socialAdSelectors.forEach(selector => {
+                    document.querySelectorAll(selector).forEach(adElement => {
+                        // Check if the element is likely an ad from the specified provider or a common ad pattern
+                        const adContentCheck = adElement.innerHTML.includes('profitableratecpm') || 
+                                             (adElement.src && adElement.src.includes('profitableratecpm')) ||
+                                             adElement.id.toLowerCase().includes('ad') || 
+                                             adElement.className.toLowerCase().includes('ad');
+                        
+                        // More specific check if it's an iframe likely from the social bar provider
+                        const isSocialBarIframe = adElement.tagName === 'IFRAME' && adElement.src && adElement.src.includes('profitableratecpm.com/13/d8/de');
+
+
+                        if (adContentCheck || isSocialBarIframe) { // Check if it's likely our social bar ad
+                           adElement.style.display = 'block'; 
+                           adElement.style.visibility = 'visible';
+                           adElement.style.opacity = '1';
+                           // console.log("Ensuring social ad element is visible:", adElement);
+                        }
+                    });
+                });
+            } catch (e) {
+                console.warn("Error while trying to ensure social ad visibility:", e);
+            }
+            // --- END: Ensure social bar ad visibility ---
+
+            switch(pageId) {
+                case 'walletPage':
+                    loadWalletBalance();
+                    if (withdrawalResultEl) withdrawalResultEl.textContent = ''; 
+                    const pendingWithdrawals = JSON.parse(localStorage.getItem(PENDING_WITHDRAWALS_LIST_KEY)) || [];
+                    if (pendingWithdrawalsDisplayAreaEl) {
+                        pendingWithdrawalsDisplayAreaEl.innerHTML = ''; 
+                        if (pendingWithdrawals.length > 0) {
+                            pendingWithdrawals.forEach(req => {
+                                const itemDiv = document.createElement('div');
+                                itemDiv.classList.add('pending-withdrawal-item');
+                                
+                                if (req.status === "Success") {
+                                    itemDiv.classList.add('success');
+                                } else { 
+                                    itemDiv.classList.add('processing');
+                                }
+
+                                const reqDate = new Date(req.timestamp);
+                                const formattedDate = `${reqDate.toLocaleDateString()} ${reqDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+                                
+                                itemDiv.innerHTML = `Request for <strong>₹${req.amount.toFixed(1)}</strong> to UPI ID <strong>${req.upiId}</strong> is <span class="status-text">${req.status}</span>. (Requested on: ${formattedDate})`;
+                                pendingWithdrawalsDisplayAreaEl.appendChild(itemDiv);
+                            });
+                        } else {
+                            pendingWithdrawalsDisplayAreaEl.innerHTML = '<p style="opacity:0.7;">No pending withdrawals.</p>';
+                        }
+                    }
+                    if (withdrawalForm) withdrawalForm.reset();
+                    break;
+                case 'referFriendPage':
+                    const userRefId = generateUserReferralId();
+                    const baseUrl = window.location.origin + window.location.pathname;
+                    const referralLink = `${baseUrl}?ref=${userRefId}`;
+                    if(userReferralLinkEl) userReferralLinkEl.textContent = referralLink; 
+                    const countKey = REFERRAL_COUNTS_KEY_PREFIX + userRefId;
+                    if(friendsJoinedCountEl) friendsJoinedCountEl.textContent = localStorage.getItem(countKey) || '0';
+                    break;
+                case 'captchaPage': 
+                    generateNewCaptchaPage(); 
+                    if(captchaInputElPage) captchaInputElPage.value = ''; 
+                    if(submitCaptchaBtnPage) submitCaptchaBtnPage.disabled = false; 
+                    break;
+                case 'dailyBonusPage': checkDailyBonusStatusPage(); break;
+                case 'spinWheelPage': 
+                    drawWheel(); 
+                    updateSpinButtonStatus();
+                    break;
+                case 'mathQuizPage': 
+                    generateMathProblemPage(); 
+                    if(mathAnswerInputElPage) mathAnswerInputElPage.value = ''; 
+                    if(submitMathAnswerBtnPage) submitMathAnswerBtnPage.disabled = false; 
+                    break;
+                case 'dashboardPage': 
+                    loadWalletBalance(); 
+                    break;
+            }
+        }
+
+        function generateUserReferralId() {
+            let userId = localStorage.getItem(USER_REFERRAL_ID_KEY);
+            if (!userId) {
+                userId = 'ref_' + Math.random().toString(36).substring(2, 9);
+                localStorage.setItem(USER_REFERRAL_ID_KEY, userId);
+            }
+            return userId;
+        }
+
+        function trackReferralVisit() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const referredBy = urlParams.get('ref');
+            if (referredBy) {
+                const alreadyProcessedKey = `processedRef_${referredBy}`;
+                if (!sessionStorage.getItem(alreadyProcessedKey)) { 
+                    const countKey = REFERRAL_COUNTS_KEY_PREFIX + referredBy;
+                    let currentCount = parseInt(localStorage.getItem(countKey) || '0');
+                    currentCount++;
+                    localStorage.setItem(countKey, currentCount.toString());
+                    sessionStorage.setItem(alreadyProcessedKey, 'true');
+                }
+            }
+        }
+
+        if(headerWalletButton) { headerWalletButton.addEventListener('click', () => { const targetPageId = headerWalletButton.dataset.taskTarget; if (targetPageId) showPage(targetPageId); }); }
+        
+        taskCards.forEach(card => { 
+            card.addEventListener('click', () => { 
+                const targetPageId = card.dataset.taskTarget; 
+                if (targetPageId) showPage(targetPageId); 
+            }); 
+        });
+        
+        promoCards.forEach(card => {
+            card.addEventListener('click', () => {
+                const targetPageId = card.dataset.taskTarget;
+                if (targetPageId) { 
+                    showPage(targetPageId);
+                }
+            });
+        });
+
+        backButtons.forEach(button => { button.addEventListener('click', () => { const targetPageId = button.dataset.targetPage; if (targetPageId) showPage(targetPageId); }); });
+
+        if (copyReferralLinkBtn && userReferralLinkEl) {
+            copyReferralLinkBtn.addEventListener('click', () => {
+                const linkToCopy = userReferralLinkEl.textContent;
+                navigator.clipboard.writeText(linkToCopy).then(() => {
+                    showToast('Referral link copied to clipboard!');
+                }).catch(err => {
+                    showToast('Failed to copy link. Please copy manually.', 'error');
+                    console.error('Copy failed:', err);
+                });
+            });
+        }
+        
+        const captchaTextDisplayEl = document.getElementById('captchaTextDisplay'); 
+        const captchaInputElPage = document.getElementById('captchaInput'); 
+        const submitCaptchaBtnPage = document.getElementById('submitCaptchaBtnPage');
+        function generateNewCaptchaPage() { 
+            if(!captchaTextDisplayEl) return; 
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; generatedCaptcha = ''; 
+            for (let i = 0; i < 5; i++) generatedCaptcha += chars.charAt(Math.floor(Math.random() * chars.length)); 
+            captchaTextDisplayEl.textContent = generatedCaptcha; 
+        }
+
+        if(submitCaptchaBtnPage && captchaInputElPage) { 
+            submitCaptchaBtnPage.addEventListener('click', () => { 
+                if (captchaInputElPage.value.toUpperCase() === generatedCaptcha) { 
+                    const reward = getRandomReward(); addToWallet(reward, 'Captcha'); 
+                    submitCaptchaBtnPage.disabled = true; showToast('Captcha solved! Redirecting...'); 
+                    setTimeout(() => showPage('dashboardPage'), 1500); 
+                } else { 
+                    showToast('Incorrect Captcha. Try again!', 'error'); generateNewCaptchaPage(); captchaInputElPage.value = ''; 
+                } 
+            });
+        }
+        
+        const dailyBonusMessageEl = document.getElementById('dailyBonusMessage'); 
+        const claimDailyBonusBtnPage = document.getElementById('claimDailyBonusBtnPage');
+        function checkDailyBonusStatusPage() { 
+            if(!dailyBonusMessageEl || !claimDailyBonusBtnPage) return; 
+            const today = new Date().toLocaleDateString(); const lastClaimDate = localStorage.getItem('dailyBonusLastClaim'); 
+            if (lastClaimDate === today) { 
+                dailyBonusMessageEl.textContent = 'You have already claimed your bonus today.'; 
+                claimDailyBonusBtnPage.textContent = 'Already Claimed'; claimDailyBonusBtnPage.disabled = true; 
+            } else { 
+                dailyBonusRewardAmount = getRandomReward();  
+                dailyBonusMessageEl.textContent = `Claim your daily bonus of ₹${dailyBonusRewardAmount.toFixed(1)}!`; 
+                claimDailyBonusBtnPage.textContent = `Claim ₹${dailyBonusRewardAmount.toFixed(1)} Now`; claimDailyBonusBtnPage.disabled = false; 
+            } 
+        }
+        if(claimDailyBonusBtnPage) { 
+            claimDailyBonusBtnPage.addEventListener('click', () => { 
+                const today = new Date().toLocaleDateString(); 
+                if (typeof dailyBonusRewardAmount === 'undefined') dailyBonusRewardAmount = getRandomReward(); 
+                addToWallet(dailyBonusRewardAmount, 'Daily Bonus'); localStorage.setItem('dailyBonusLastClaim', today); 
+                checkDailyBonusStatusPage(); showToast('Bonus claimed! Redirecting...'); 
+                setTimeout(() => showPage('dashboardPage'), 1500); 
+            });
+        }
+        
+        function getTodayDateString() {
+            return new Date().toLocaleDateString();
+        }
+
+        function getSpinCount() {
+            const lastSpinDate = localStorage.getItem(LAST_SPIN_DATE_KEY);
+            const today = getTodayDateString();
+            if (lastSpinDate !== today) {
+                localStorage.setItem(SPIN_COUNT_KEY, '0');
+                localStorage.setItem(LAST_SPIN_DATE_KEY, today);
+                return 0;
+            }
+            return parseInt(localStorage.getItem(SPIN_COUNT_KEY) || '0');
+        }
+
+        function incrementSpinCount() {
+            let count = getSpinCount(); 
+            count++;
+            localStorage.setItem(SPIN_COUNT_KEY, count.toString());
+            return count;
+        }
+
+        function updateSpinButtonStatus() {
+            if (!spinButtonPage || !spinLimitMessageEl) return;
+            const spinsToday = getSpinCount();
+            const spinsLeft = MAX_SPINS_PER_DAY - spinsToday;
+
+            if (spinsLeft <= 0) {
+                spinButtonPage.disabled = true;
+                spinButtonPage.textContent = "LIMIT REACHED";
+                spinLimitMessageEl.textContent = `Daily spin limit reached. Come back tomorrow!`;
+            } else {
+                spinButtonPage.disabled = isSpinning;
+                if (!isSpinning) spinButtonPage.textContent = "SPIN THE WHEEL";
+                 spinLimitMessageEl.textContent = `${spinsLeft} spins left today.`;
+            }
+        }
+
+        function drawWheel() { 
+            if(!wheelCanvas || !ctxw) return; 
+            const centerX = wheelCanvas.width / 2; const centerY = wheelCanvas.height / 2; 
+            const radius = Math.min(centerX, centerY) - 5; const angleStep = (2 * Math.PI) / segments; 
+            ctxw.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height); 
+            for (let i = 0; i < segments; i++) { 
+                const startAngle = i * angleStep; const endAngle = (i + 1) * angleStep; 
+                ctxw.beginPath(); ctxw.moveTo(centerX, centerY); ctxw.arc(centerX, centerY, radius, startAngle, endAngle); ctxw.closePath(); 
+                ctxw.fillStyle = segmentColors[i % segmentColors.length]; ctxw.fill(); 
+                ctxw.strokeStyle = '#fff'; ctxw.lineWidth = 2; ctxw.stroke(); 
+            } 
+        }
+
+        if(spinButtonPage && wheelCanvas) { 
+            spinButtonPage.addEventListener('click', () => { 
+                if (isSpinning) return;
+                
+                const spinsToday = getSpinCount();
+                if (spinsToday >= MAX_SPINS_PER_DAY) {
+                    showToast('Daily spin limit reached! Come back tomorrow.', 'error');
+                    updateSpinButtonStatus();
+                    return;
+                }
+
+                isSpinning = true; 
+                incrementSpinCount();
+                updateSpinButtonStatus(); 
+
+                spinButtonPage.disabled = true; 
+                spinButtonPage.textContent = "SPINNING..."; 
+                const totalRotations = (Math.floor(Math.random() * 4) + 4) * 360; 
+                const randomPartialRotation = Math.random() * 360; 
+                const finalRotation = totalRotations + randomPartialRotation; 
+                currentAngle += finalRotation; 
+                wheelCanvas.style.transform = `rotate(${currentAngle}deg)`; 
+                
+                setTimeout(() => { 
+                    isSpinning = false; 
+                    const reward = getRandomReward(); 
+                    addToWallet(reward, 'Spin Wheel'); 
+                    updateSpinButtonStatus(); 
+                }, parseFloat(getComputedStyle(wheelCanvas).transitionDuration) * 1000 + 100); 
+            });
+        }
+        
+        const mathQuestionDisplayEl = document.getElementById('mathQuestionDisplay'); 
+        const mathAnswerInputElPage = document.getElementById('mathAnswerInputPage'); 
+        const submitMathAnswerBtnPage = document.getElementById('submitMathAnswerBtnPage');
+        function generateMathProblemPage() { 
+            if(!mathQuestionDisplayEl) return; 
+            const num1 = Math.floor(Math.random() * 10) + 1; const num2 = Math.floor(Math.random() * 10) + 1; 
+            const operators = ['+', '-', '*']; const operator = operators[Math.floor(Math.random() * operators.length)]; 
+            let question = `${num1} ${operator} ${num2}`; 
+            if (operator === '-' && num1 < num2) { question = `${num2} ${operator} ${num1}`; mathQuizAnswer = num2 - num1; } 
+            else if (operator === '+') mathQuizAnswer = num1 + num2; 
+            else if (operator === '*') mathQuizAnswer = num1 * num2; 
+            else { mathQuizAnswer = num1 + num2; question = `${num1} + ${num2}`; } 
+            mathQuestionDisplayEl.textContent = `What is ${question}?`; 
+        }
+        if(submitMathAnswerBtnPage && mathAnswerInputElPage) { 
+            submitMathAnswerBtnPage.addEventListener('click', () => { 
+                const userAnswer = parseInt(mathAnswerInputElPage.value); 
+                if (!isNaN(userAnswer) && userAnswer === mathQuizAnswer) { 
+                    const reward = getRandomReward(); addToWallet(reward, 'Math Quiz'); 
+                    generateMathProblemPage(); mathAnswerInputElPage.value = ''; 
+                } else { 
+                    showToast('Incorrect Answer. Try again!', 'error'); mathAnswerInputElPage.value = ''; 
+                } 
+            });
+        }
+
+        if (withdrawalForm && upiIdInput && withdrawalAmountInput && withdrawalResultEl) {
+            withdrawalForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const upiId = upiIdInput.value.trim();
+                const amount = parseFloat(withdrawalAmountInput.value);
+                withdrawalResultEl.textContent = '';
+
+                if (!upiId || !upiId.includes('@') || upiId.length < 5) {
+                    withdrawalResultEl.style.color = 'var(--error-red)';
+                    withdrawalResultEl.textContent = 'Please enter a valid UPI ID.'; return;
+                }
+                if (isNaN(amount) || amount < MIN_WITHDRAWAL_AMOUNT) {
+                    withdrawalResultEl.style.color = 'var(--error-red)';
+                    withdrawalResultEl.textContent = `Minimum withdrawal amount is ₹${MIN_WITHDRAWAL_AMOUNT}.`; return;
+                }
+                if (amount > currentWalletBalance) {
+                    withdrawalResultEl.style.color = 'var(--error-red)';
+                    withdrawalResultEl.textContent = 'Withdrawal amount cannot exceed your current balance.'; return;
+                }
+
+                currentWalletBalance -= amount;
+                updateWalletDisplay();
+                saveWalletBalance();
+
+                const requestId = Date.now().toString();
+
+                const newWithdrawalRequest = {
+                    id: requestId,
+                    upiId: upiId,
+                    amount: amount,
+                    timestamp: new Date().toISOString(),
+                    status: "Processing" 
+                };
+
+                let pendingWithdrawals = JSON.parse(localStorage.getItem(PENDING_WITHDRAWALS_LIST_KEY)) || [];
+                pendingWithdrawals.push(newWithdrawalRequest);
+                localStorage.setItem(PENDING_WITHDRAWALS_LIST_KEY, JSON.stringify(pendingWithdrawals));
+
+                initializePageContent('walletPage');
+                showToast('Withdrawal request submitted and is now processing.');
+                withdrawalForm.reset();
+
+                const successChance = 0.7; 
+                const shouldSucceed = Math.random() < successChance;
+
+                if (shouldSucceed) {
+                    const randomDelay = Math.floor(Math.random() * (5 * 60 * 1000 - 1 * 60 * 1000 + 1)) + 1 * 60 * 1000;
+                    
+                    console.log(`Withdrawal ${requestId} is scheduled to change to Success in ${randomDelay / 1000} seconds.`);
+                    setTimeout(() => {
+                        updateWithdrawalStatus(requestId, "Success");
+                        if (currentPageId === 'walletPage') {
+                             const updatedRequest = (JSON.parse(localStorage.getItem(PENDING_WITHDRAWALS_LIST_KEY)) || []).find(r => r.id === requestId);
+                             if(updatedRequest){
+                                showToast(`Withdrawal for ₹${updatedRequest.amount.toFixed(1)} to ${updatedRequest.upiId} is now successful!`);
+                             }
+                        }
+                    }, randomDelay);
+                } else {
+                     console.log(`Withdrawal ${requestId} will remain in processing (simulated).`);
+                }
+            });
+        }
+
+        trackReferralVisit();
+        loadWalletBalance();
+        initializePageContent('dashboardPage'); 
+    });
+</script>
+</body>
+</html>
